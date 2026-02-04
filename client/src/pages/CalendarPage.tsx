@@ -17,7 +17,9 @@ import { toast } from "sonner";
 
 function normalizeDateKey(dateInput: string | Date): string {
   if (!dateInput) return "";
-  if (typeof dateInput === 'string') return dateInput.split('T')[0];
+  if (typeof dateInput === 'string') {
+    return dateInput.split('T')[0];
+  }
   try {
     return dateInput.toISOString().split('T')[0];
   } catch {
@@ -89,7 +91,10 @@ function getEventLabel(event: { type?: string; description?: string | null }): s
   else if (typeLower.includes("apoio")) label = "Apoio";
   else if (typeLower.includes("corredor")) label = "Corredor";
   
-  if (!timeStr && SHIFT_HOURS[typeLower]) timeStr = SHIFT_HOURS[typeLower];
+  if (!timeStr) {
+    const mappedTime = SHIFT_HOURS[typeLower];
+    if (mappedTime) timeStr = mappedTime;
+  }
   
   if (timeStr && !label.includes(timeStr)) return `${label} ${timeStr}`;
   if (!timeStr && desc.length < 20 && desc.length > 0 && desc !== type) return desc;
@@ -129,6 +134,7 @@ export default function CalendarPage() {
   const { data: authData } = trpc.auth.checkSimpleAuth.useQuery();
   const utils = trpc.useUtils();
 
+  // Query do diário para o dia selecionado (apenas admin)
   const selectedDateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
   const { data: diaryEntry } = trpc.diary.get.useQuery(
     { date: selectedDateKey || "" },
@@ -141,7 +147,7 @@ export default function CalendarPage() {
 
   const createEventMutation = trpc.events.create.useMutation({
     onSuccess: () => {
-      toast.success("Evento adicionado!");
+      toast.success("Evento adicionado com sucesso!");
       utils.events.list.invalidate();
       setShowAddTrainingModal(false);
       setShowAddEventModal(false);
@@ -152,7 +158,7 @@ export default function CalendarPage() {
 
   const updateEventMutation = trpc.events.update.useMutation({
     onSuccess: () => {
-      toast.success("Atualizado com sucesso!");
+      toast.success("Evento atualizado com sucesso!");
       utils.events.list.invalidate();
       setShowEditModal(false);
       setEditingEvent(null);
@@ -163,7 +169,7 @@ export default function CalendarPage() {
 
   const deleteEventMutation = trpc.events.delete.useMutation({
     onSuccess: () => {
-      toast.success("Excluído com sucesso!");
+      toast.success("Evento excluído com sucesso!");
       utils.events.list.invalidate();
       setShowDeleteConfirm(false);
       setEventToDelete(null);
@@ -176,6 +182,11 @@ export default function CalendarPage() {
     setTrainingType(""); setTrainingTime(""); setTrainingDescription("");
     setEventType(""); setCustomEventType(""); setEventTime(""); setEventDescription("");
   };
+
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const startDayOfWeek = getDay(monthStart);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, typeof events>();
@@ -193,7 +204,8 @@ export default function CalendarPage() {
 
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
-    return eventsByDate.get(format(selectedDate, 'yyyy-MM-dd')) || [];
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    return eventsByDate.get(dateStr) || [];
   }, [selectedDate, eventsByDate]);
 
   const editableEvents = useMemo(() => {
@@ -212,6 +224,7 @@ export default function CalendarPage() {
 
   const handleAddTraining = () => {
     if (!selectedDate || !trainingType || !trainingTime) return toast.error("Preencha campos.");
+    if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(trainingTime)) return toast.error("Horário inválido.");
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const description = trainingDescription ? `${trainingDescription} ${trainingTime}` : `${trainingType} ${trainingTime}`;
     createEventMutation.mutate({ date: dateStr, type: trainingType, description, isShift: false });
@@ -273,9 +286,6 @@ export default function CalendarPage() {
   const confirmDelete = () => {
     if (eventToDelete) deleteEventMutation.mutate({ id: eventToDelete.id });
   };
-
-  const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
-  const startDayOfWeek = getDay(startOfMonth(currentMonth));
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -344,20 +354,24 @@ export default function CalendarPage() {
                   <h4 className="text-sm font-semibold flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> Diário do Dia</h4>
                   <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => { setShowDayModal(false); navigate(`/diario?date=${format(selectedDate!, 'yyyy-MM-dd')}`); }}>Abrir Diário Completo &rarr;</Button>
                 </div>
-                <div className="bg-muted/30 p-3 rounded-md text-sm text-muted-foreground italic min-h-[60px]">{diaryEntry?.content ? <p className="line-clamp-3">"{diaryEntry.content.substring(0, 200)}..."</p> : <span className="opacity-50">Nenhum registro.</span>}</div>
+                <div className="bg-muted/30 p-3 rounded-md text-sm text-muted-foreground italic min-h-[60px]">
+                  {diaryEntry?.content ? (
+                    <div>
+                      {diaryEntry.title && <p className="font-semibold not-italic text-foreground mb-1">{diaryEntry.title}</p>}
+                      <p className="line-clamp-3">"{diaryEntry.content.substring(0, 200)}..."</p>
+                    </div>
+                  ) : <span className="opacity-50">Nenhum registro.</span>}
+                </div>
               </div>
             )}
           </div>
         </DialogContent>
       </Dialog>
       
-      {/* Modais de Add Event, Training, Edit e Delete mantidos (simplificados visualmente aqui mas funcionais no código) */}
+      {/* Modais de Add Event, Training, Edit e Delete mantidos (simplificados visualmente aqui mas funcionais no código completo) */}
       <Dialog open={showAddEventModal} onOpenChange={setShowAddEventModal}><DialogContent><DialogHeader><DialogTitle>Novo Evento</DialogTitle></DialogHeader><div className="space-y-4 py-4"><Select value={eventType} onValueChange={setEventType}><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent>{EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>{eventType === "Outro" && <Input value={customEventType} onChange={e => setCustomEventType(e.target.value)} placeholder="Personalizado" />}<Input type="time" value={eventTime} onChange={e => setEventTime(e.target.value)} /><Textarea value={eventDescription} onChange={e => setEventDescription(e.target.value)} placeholder="Obs" /></div><DialogFooter><Button onClick={handleAddEvent}>Salvar</Button></DialogFooter></DialogContent></Dialog>
-      
       <Dialog open={showAddTrainingModal} onOpenChange={setShowAddTrainingModal}><DialogContent><DialogHeader><DialogTitle>Novo Treino</DialogTitle></DialogHeader><div className="space-y-4 py-4"><Select value={trainingType} onValueChange={setTrainingType}><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent><SelectItem value="Musculação">Musculação</SelectItem><SelectItem value="Pilates">Pilates</SelectItem></SelectContent></Select><Input type="time" value={trainingTime} onChange={e => setTrainingTime(e.target.value)} /><Textarea value={trainingDescription} onChange={e => setTrainingDescription(e.target.value)} placeholder="Obs" /></div><DialogFooter><Button onClick={handleAddTraining}>Salvar</Button></DialogFooter></DialogContent></Dialog>
-
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}><DialogContent><DialogHeader><DialogTitle>Editar</DialogTitle></DialogHeader><div className="space-y-4 py-4">{isAdmin ? <><Select value={eventType} onValueChange={setEventType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select><Input type="time" value={eventTime} onChange={e => setEventTime(e.target.value)} /><Textarea value={eventDescription} onChange={e => setEventDescription(e.target.value)} /></> : <><Select value={trainingType} onValueChange={setTrainingType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Musculação">Musculação</SelectItem><SelectItem value="Pilates">Pilates</SelectItem></SelectContent></Select><Input type="time" value={trainingTime} onChange={e => setTrainingTime(e.target.value)} /><Textarea value={trainingDescription} onChange={e => setTrainingDescription(e.target.value)} /></>}</div><DialogFooter><Button onClick={isAdmin ? handleUpdateEvent : handleUpdateTraining}>Atualizar</Button></DialogFooter></DialogContent></Dialog>
-
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}><DialogContent><DialogHeader><DialogTitle>Excluir?</DialogTitle></DialogHeader><DialogFooter><Button variant="destructive" onClick={confirmDelete}>Excluir</Button></DialogFooter></DialogContent></Dialog>
     </div>
   );
