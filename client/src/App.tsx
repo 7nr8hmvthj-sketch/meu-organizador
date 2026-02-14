@@ -14,6 +14,7 @@ import Finance from "./pages/Finance";
 import Medications from "./pages/Medications";
 import Today from "./pages/Today";
 import DiaryPage from "./pages/DiaryPage";
+import ComparisonPage from "./pages/ComparisonPage";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -26,7 +27,8 @@ import {
   LogOut,
   Menu,
   X,
-  Book
+  Book,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -57,6 +59,7 @@ function Navigation({ userRole, username }: NavigationProps) {
     { path: "/diario", label: "Diário", icon: Book, roles: ["admin"] },
     { path: "/financeiro", label: "Financeiro", icon: DollarSign, roles: ["admin"] },
     { path: "/medicamentos", label: "Medicamentos", icon: Pill, roles: ["admin"] },
+    { path: "/comparacao", label: "Comparação", icon: RefreshCw, roles: ["admin"] },
   ];
 
   const navItems = allNavItems.filter(item => 
@@ -224,6 +227,7 @@ function AuthenticatedApp({ userRole, username }: AuthenticatedAppProps) {
                 <Route path="/financeiro" component={Finance} />
                 <Route path="/medicamentos" component={Medications} />
                 <Route path="/diario" component={DiaryPage} />
+                <Route path="/comparacao" component={ComparisonPage} />
               </>
             )}
             <Route path="/calendario" component={CalendarPage} />
