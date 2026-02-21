@@ -134,6 +134,13 @@ export default function CalendarPage() {
   const { data: authData } = trpc.auth.checkSimpleAuth.useQuery();
   const utils = trpc.useUtils();
 
+  // Query dedicada para o total de horas ZN do período de fechamento (dia 20 do mês anterior ao dia 19 do mês atual)
+  const { data: znHoursData } = trpc.events.getZNHours.useQuery({
+    month: currentMonth.getMonth() + 1,
+    year: currentMonth.getFullYear(),
+  });
+  const znTotalHours = znHoursData?.totalHours ?? 0;
+
   // Query do diário para o dia selecionado (apenas admin)
   const selectedDateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
   const { data: diaryEntry } = trpc.diary.get.useQuery(
@@ -321,6 +328,16 @@ export default function CalendarPage() {
                     {dayEvents.slice(0, 3).map(e => <div key={e.id} className={`text-[10px] px-1.5 py-0.5 rounded-sm truncate w-full border-l-2 text-left font-medium ${getEventColor(e.type, e.isPassed)} ${e.isPassed ? "line-through opacity-60" : ""}`}>{getEventLabel(e)}</div>)}
                     {dayEvents.length > 3 && <div className="text-[9px] text-muted-foreground pl-1">+{dayEvents.length - 3} mais</div>}
                   </div>
+                  {format(day, "d") === "19" && isSameMonth(day, currentMonth) && znTotalHours > 0 && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-auto w-full px-1.5 py-0.5 rounded-sm bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 cursor-default"
+                    >
+                      <span className="text-[9px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        Total ZN: {znTotalHours}h
+                      </span>
+                    </div>
+                  )}
                 </button>
               );
             })}

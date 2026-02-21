@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
+import { calculateShiftHours } from "../shared/zn-hours-calculator";
 
 // --- MIDDLEWARES ---
 
@@ -94,6 +95,39 @@ export const appRouter = router({
     // Trainers veem agenda do Admin (ID 1)
     list: publicProcedure.query(async () => await db.getEventsByUserId(1)),
     
+    getZNHours: publicProcedure
+      .input(z.object({ month: z.number(), year: z.number() }))
+      .query(async ({ input }) => {
+        const { month, year } = input;
+        const startDate = new Date(year, month - 2, 20);
+        const endDate = new Date(year, month - 1, 19);
+
+        const events = await db.getEventsByDateRange(1, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+
+        const znKeywords = ['zn', 'noturno', 'apoio', 'observação'];
+        const exclusionKeywords = ['hc', 'home care', 'lembrete'];
+
+        const totalHours = events.reduce((acc, event) => {
+          const typeLower = event.type.toLowerCase();
+
+          if (event.isPassed) {
+            return acc;
+          }
+
+          if (exclusionKeywords.some(keyword => typeLower.includes(keyword))) {
+            return acc;
+          }
+
+          if (znKeywords.some(keyword => typeLower.includes(keyword))) {
+            return acc + calculateShiftHours(event.type);
+          }
+
+          return acc;
+        }, 0);
+
+        return { totalHours };
+      }),
+
     listByDateRange: publicProcedure
       .input(z.object({ startDate: z.string(), endDate: z.string() }))
       .query(async ({ input }) => await db.getEventsByDateRange(1, input.startDate, input.endDate)),
