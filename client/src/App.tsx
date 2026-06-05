@@ -14,6 +14,7 @@ import Finance from "./pages/Finance";
 import Medications from "./pages/Medications";
 import Today from "./pages/Today";
 import DiaryPage from "./pages/DiaryPage";
+import { PrivacyPolicyPage, SupportPage } from "./pages/PublicLegalPages";
 
 import { 
   LayoutDashboard, 
@@ -80,7 +81,7 @@ function Navigation({ userRole, username }: NavigationProps) {
       <aside className="hidden lg:flex flex-col w-64 bg-card border-r h-screen fixed left-0 top-0">
         <div className="p-6 border-b">
           <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-            Meu Organizador
+            Meus Plantões
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
             {username ? `Olá, ${username}` : "2026"}
@@ -132,7 +133,7 @@ function Navigation({ userRole, username }: NavigationProps) {
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b z-50 flex items-center justify-between px-4">
         <div>
           <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-            Meu Organizador
+            Meus Plantões
           </h1>
           {username && (
             <p className="text-[10px] text-muted-foreground">Olá, {username}</p>
@@ -265,6 +266,8 @@ function AuthenticatedApp({ userRole, username }: AuthenticatedAppProps) {
 }
 
 function AppContent() {
+  const [location] = useLocation();
+  const isPublicRoute = location === "/privacy" || location === "/support";
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const { data: authData, isLoading, refetch } = trpc.auth.checkSimpleAuth.useQuery();
@@ -284,6 +287,15 @@ function AppContent() {
       setUserInfo(result.data.user);
     }
   };
+
+  if (isPublicRoute) {
+    return (
+      <Switch>
+        <Route path="/privacy" component={PrivacyPolicyPage} />
+        <Route path="/support" component={SupportPage} />
+      </Switch>
+    );
+  }
 
   if (isLoading || isAuthenticated === null) {
     return (

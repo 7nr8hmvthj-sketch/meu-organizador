@@ -80,8 +80,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 mb-4">
             <Calendar className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Meu Organizador</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Organize sua vida pessoal e profissional</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Meus Plantões</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Organize seus plantões, agenda e rotina</p>
         </div>
 
         {/* Tab Switcher */}
@@ -209,9 +209,14 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
-          2026 • Organizador Pessoal
-        </p>
+        <div className="mt-6 space-y-2 text-center text-sm text-slate-500 dark:text-slate-400">
+          <p>2026 • Meus Plantões</p>
+          <div className="flex items-center justify-center gap-3 text-xs">
+            <a className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-300" href="/privacy">Privacidade</a>
+            <span>•</span>
+            <a className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-300" href="/support">Suporte</a>
+          </div>
+        </div>
       </div>
     </div>
   );
